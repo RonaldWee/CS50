@@ -1,0 +1,59 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(int argc, char *argv[])
+{
+    if (argc != 2)
+    {
+        printf("Usage: ./recover image\n");
+        return 1;
+    }
+
+    FILE *file = fopen(argv[1], "r");
+    if (!file)
+    {
+        printf("Invalid File\n");
+        return 1;
+    }
+
+    unsigned char buffer[512];
+    char filename[8];
+    int count = 0;
+    int jpeg_found = 0;
+    FILE *img = NULL;
+
+    while (fread(buffer, sizeof(buffer), 1, file) == 1)
+    {
+        if (buffer[0] == 0xff && buffer[1] == 0xd8 && buffer[2] == 0xff && (buffer[3] & 0xf0) == 0xe0)
+        {
+            //new jpeg found
+            if (jpeg_found == 1)
+            {
+                fclose(img);
+            }
+
+            //first jpeg found
+            else
+            {
+                jpeg_found = 1;
+            }
+
+
+            //create a file called ###.jpg
+            sprintf(filename, "%03i.jpg", count);
+            //create a file called img inside the file
+            img = fopen(filename, "w");
+            count++;
+        }
+
+        //keep writing the 512 bytes into the file 'img' until we find a new jpeg
+        if (jpeg_found == 1)
+        {
+            fwrite(buffer, sizeof(buffer), 1, img);
+        }
+    }
+    fclose(img);
+    fclose(file);
+
+    return 0;
+}
